@@ -1,0 +1,67 @@
+{
+    "version": "2.0.0",
+    "options": {
+        "cwd": "${workspaceFolder}"
+    },
+    "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+    },
+    "problemMatcher": {
+        "owner": "java",
+        "fileLocation": ["absolute"],
+        "pattern": {
+            "regexp": "^(.*\\.java):(\\d+):\\s+(error|warning):\\s+(.*)$",
+            "file": 1,
+            "line": 2,
+            "severity": 3,
+            "message": 4
+        }
+    },
+    "tasks": [
+        {
+            "label": "Gradle: Clean",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": ["clean"],
+            "windows": { "command": ".\\gradlew.bat" },
+            "group": "build"
+        },
+        {
+            "label": "Gradle: Build Debug APK",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": ["assembleDebug"],
+            "windows": { "command": ".\\gradlew.bat" },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Gradle: Build Release APK",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": ["assembleRelease"],
+            "windows": { "command": ".\\gradlew.bat" },
+            "group": "build"
+        },
+        {
+            "label": "Gradle: Install Debug (需连接设备)",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": ["installDebug"],
+            "windows": { "command": ".\\gradlew.bat" },
+            "group": "build"
+        },
+        {
+            "label": "Gradle: Lint",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": ["lintDebug"],
+            "windows": { "command": ".\\gradlew.bat" },
+            "group": "test"
+        }
+    ]
+}
