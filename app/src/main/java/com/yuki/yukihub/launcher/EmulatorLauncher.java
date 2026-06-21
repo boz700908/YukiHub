@@ -85,6 +85,18 @@ if (packageName == null || packageName.trim().isEmpty()) return false;
             } catch (Exception ignored) { }
             return false;
         }
+        if ("internal.rpg".equalsIgnoreCase(pkg) || "cyou.joiplay.joiplay".equalsIgnoreCase(pkg) || isJoiPlayPackage(pkg)) {
+            // 检查JoiPlay是否安装
+            if (!isJoiPlayInstalled(context)) {
+                Log.w("EmulatorLauncher", "JoiPlay is not installed, cannot launch RPG game");
+                return false;
+            }
+            try {
+                context.startActivity(buildInternalRpgIntent(context, rootUri, launchTarget));
+                return true;
+            } catch (Exception ignored) { }
+            return false;
+        }
         if (isGameHubPackage(pkg)) {
             String mode = gamehubLaunchMode == null ? "game" : gamehubLaunchMode.trim().toLowerCase(Locale.ROOT);
             if ("program".equals(mode) || "normal".equals(mode)) {
@@ -1200,6 +1212,15 @@ private static String resolveInternalArtemisPath(String rootUri, String launchTa
     }
     
     /**
+     * 检查是否是JoiPlay包
+     */
+    private static boolean isJoiPlayPackage(String pkg) {
+        if (pkg == null) return false;
+        String p = pkg.trim().toLowerCase(Locale.ROOT);
+        return p.contains("joiplay") || p.equals("cyou.joiplay.joiplay");
+    }
+    
+    /**
      * 启动PSP游戏
      */
     public static boolean launchPspGame(Context context, String gameUri, String launchTarget) {
@@ -1216,6 +1237,80 @@ private static String resolveInternalArtemisPath(String rootUri, String launchTa
         } catch (Exception e) {
             Log.e("EmulatorLauncher", "Failed to launch PSP game", e);
             return false;
+        }
+    }
+    
+    /**
+     * 检查JoiPlay是否已安装
+     */
+    public static boolean isJoiPlayInstalled(Context context) {
+        try {
+            PackageManager pm = context.getPackageManager();
+            pm.getPackageInfo("cyou.joiplay.joiplay", PackageManager.GET_ACTIVITIES);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+    
+    /**
+     * 构建启动RPG Maker游戏的Intent
+     * 使用JoiPlay来启动RPG游戏
+     */
+    public static Intent buildInternalRpgIntent(Context context, String gameUri, String launchTarget) {
+        // 直接使用gameUri，它可能是file://或content://格式
+        Uri gameUriParsed = Uri.parse(gameUri);
+        
+        // 如果是文件路径（以/开头），转换为file:// URI
+        if (gameUri.startsWith("/")) {
+            gameUriParsed = Uri.parse("file://" + gameUri);
+        }
+        
+        // 创建Intent，使用VIEW action
+        Intent intent = new Intent(Intent.ACTION_VIEW, gameUriParsed);
+        
+        // 设置JoiPlay的包名
+        intent.setPackage("cyou.joiplay.joiplay");
+        
+        // 添加必要的flags
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | 
+                       Intent.FLAG_GRANT_READ_URI_PERMISSION | 
+                       Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        
+        Log.i("EmulatorLauncher", "Built RPG intent uri=" + gameUriParsed);
+        return intent;
+    }
+    
+    /**
+     * 启动RPG Maker游戏
+     */
+    public static boolean launchRpgGame(Context context, String gameUri, String launchTarget) {
+        // 先检查JoiPlay是否安装
+        if (!isJoiPlayInstalled(context)) {
+            Log.w("EmulatorLauncher", "JoiPlay is not installed");
+            return false;
+        }
+        
+        try {
+            Intent intent = buildInternalRpgIntent(context, gameUri, launchTarget);
+            context.startActivity(intent);
+            return true;
+        } catch (Exception e) {
+            Log.e("EmulatorLauncher", "Failed to launch RPG game", e);
+            return false;
+        }
+    }
+    
+    /**
+     * 获取JoiPlay的下载Intent（跳转到应用商店）
+     */
+    public static Intent getJoiPlayDownloadIntent() {
+        try {
+            // 尝试打开Google Play商店
+            return new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=cyou.joiplay.joiplay"));
+        } catch (Exception e) {
+            // 如果无法打开商店，打开浏览器
+            return new Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=cyou.joiplay.joiplay"));
         }
     }
     

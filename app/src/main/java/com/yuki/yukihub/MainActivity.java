@@ -2049,6 +2049,7 @@ scanMissingCoversIfNeeded();
         if ("WINLATOR".equals(filter) && g.engine != EngineType.WINLATOR) continue;
         if ("GAMEHUB".equals(filter) && g.engine != EngineType.GAMEHUB) continue;
         if ("PSP".equals(filter) && g.engine != EngineType.PSP) continue;
+        if ("RPG".equals(filter) && g.engine != EngineType.RPG) continue;
         if ("UNKNOWN".equals(filter) && g.engine != EngineType.UNKNOWN) continue;
             if (developerFilter != null && !developerFilter.isEmpty()) {
                 String dev = developerOf(g);
@@ -4781,7 +4782,7 @@ private String displayPath(String value) {
             public void onTextChanged(CharSequence s, int st, int b, int c) { updateWinlatorAdvanced.run(); }
             public void afterTextChanged(Editable e) {}
         });
-        ArrayAdapter<String> spAdapter = new ArrayAdapter<>(this, R.layout.spinner_item_dark, new String[]{"AUTO", "KIRIKIRI", "ONS", "TYRANO", "ARTEMIS", "WINLATOR", "GAMEHUB", "PSP", "UNKNOWN"});
+        ArrayAdapter<String> spAdapter = new ArrayAdapter<>(this, R.layout.spinner_item_dark, new String[]{"AUTO", "KIRIKIRI", "ONS", "TYRANO", "ARTEMIS", "WINLATOR", "GAMEHUB", "PSP", "RPG", "UNKNOWN"});
         spAdapter.setDropDownViewResource(R.layout.spinner_dropdown_dark);
         sp.setAdapter(spAdapter);
         ArrayAdapter<String> winlatorModeAdapter = new ArrayAdapter<>(this, R.layout.spinner_item_dark, new String[]{"启动到游戏", "启动到程序"});
@@ -4838,6 +4839,12 @@ private String displayPath(String value) {
                     // 检查PPSSPP是否安装，如果未安装给出提示
                     if (!EmulatorLauncher.isPPSSPPInstalled(MainActivity.this)) {
                         Toast.makeText(MainActivity.this, "提示：PSP游戏需要安装PPSSPP模拟器", Toast.LENGTH_LONG).show();
+                    }
+                } else if ((pkg.getText() == null || pkg.getText().toString().trim().isEmpty()) && "RPG".equals(engine)) {
+                    pkg.setText("cyou.joiplay.joiplay");
+                    // 检查JoiPlay是否安装，如果未安装给出提示
+                    if (!EmulatorLauncher.isJoiPlayInstalled(MainActivity.this)) {
+                        Toast.makeText(MainActivity.this, "提示：RPG Maker游戏需要安装JoiPlay模拟器", Toast.LENGTH_LONG).show();
                     }
                 }
                 updateWinlatorAdvanced.run();
@@ -5107,7 +5114,7 @@ private void showEditPlayTimeDialog(Game game) {
         return hours + "h" + remain + "m";
     }
 
-    private int engineIndex(EngineType e) { if (e == EngineType.KIRIKIRI) return 1; if (e == EngineType.ONS) return 2; if (e == EngineType.TYRANO) return 3; if (e == EngineType.ARTEMIS) return 4; if (e == EngineType.WINLATOR) return 5; if (e == EngineType.GAMEHUB) return 6; if (e == EngineType.PSP) return 7; if (e == EngineType.UNKNOWN) return 8; return 0; }
+    private int engineIndex(EngineType e) { if (e == EngineType.KIRIKIRI) return 1; if (e == EngineType.ONS) return 2; if (e == EngineType.TYRANO) return 3; if (e == EngineType.ARTEMIS) return 4; if (e == EngineType.WINLATOR) return 5; if (e == EngineType.GAMEHUB) return 6; if (e == EngineType.PSP) return 7; if (e == EngineType.RPG) return 8; if (e == EngineType.UNKNOWN) return 9; return 0; }
 
     private boolean isWinlatorPackageName(String pkg) {
         if (pkg == null) return false;
@@ -5673,6 +5680,7 @@ if (showToast) Toast.makeText(this, "正在扫描 " + rootUris.size() + " 个目
         if (engine == EngineType.TYRANO || engine == EngineType.ARTEMIS || engine == EngineType.KIRIKIRI) return "[游戏目录]";
         if (engine == EngineType.GAMEHUB) return "[GameHub]";
         if (engine == EngineType.PSP) return "[PSP游戏文件]";
+        if (engine == EngineType.RPG) return "[RPG游戏目录]";
         return "[游戏目录]";
     }
 
@@ -5780,6 +5788,7 @@ try {
             if (r.engine == EngineType.TYRANO) g.emulatorPackage = "internal.tyrano";
             if (r.engine == EngineType.ARTEMIS) g.emulatorPackage = resolveArtemisPackageFromMarkers(g.rootUri);
             if (r.engine == EngineType.PSP) g.emulatorPackage = "org.ppsspp.ppsspp";
+            if (r.engine == EngineType.RPG) g.emulatorPackage = "cyou.joiplay.joiplay";
             if (isDesktopLaunchTarget(g.launchTarget)) g.emulatorPackage = guessInstalledWinlatorPackage();
             long newId = repository.insertIfNotExists(g);
             if (newId > 0) {
@@ -5818,6 +5827,7 @@ try {
         if (emulatorPackage.isEmpty() && game.engine == EngineType.WINLATOR) emulatorPackage = guessInstalledWinlatorPackage();
         if (emulatorPackage.isEmpty() && game.engine == EngineType.GAMEHUB) emulatorPackage = guessInstalledGameHubPackage();
         if (emulatorPackage.isEmpty() && game.engine == EngineType.PSP) emulatorPackage = "org.ppsspp.ppsspp";
+        if (emulatorPackage.isEmpty() && game.engine == EngineType.RPG) emulatorPackage = "cyou.joiplay.joiplay";
         if (game.engine == EngineType.ARTEMIS) {
             emulatorPackage = normalizeArtemisPackage(emulatorPackage);
         }
@@ -6250,6 +6260,26 @@ return startActivitySafely(EmulatorLauncher.buildInternalKrkrIntent(this, game.r
                 return false;
             }
             return startActivitySafely(EmulatorLauncher.buildInternalPspIntent(this, game.rootUri, launchTarget));
+        }
+        if (pkg.startsWith("internal.rpg") || pkg.equals("cyou.joiplay.joiplay")) {
+            // 检查JoiPlay是否安装
+            if (!EmulatorLauncher.isJoiPlayInstalled(this)) {
+                // 显示提示对话框
+                new AlertDialog.Builder(this)
+                    .setTitle("需要JoiPlay模拟器")
+                    .setMessage("启动RPG Maker游戏需要安装JoiPlay模拟器。\n\n是否现在去下载？")
+                    .setPositiveButton("去下载", (d, w) -> {
+                        try {
+                            startActivity(EmulatorLauncher.getJoiPlayDownloadIntent());
+                        } catch (Exception e) {
+                            Toast.makeText(this, "无法打开应用商店", Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+                return false;
+            }
+            return startActivitySafely(EmulatorLauncher.buildInternalRpgIntent(this, game.rootUri, launchTarget));
         }
         return EmulatorLauncher.launchGame(this, emulatorPackage, game.rootUri, launchTarget, game.winlatorLaunchMode, game.gamehubLaunchMode, game.gamehubLocalGameId);
     }

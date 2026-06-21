@@ -9,6 +9,7 @@ public enum EngineType {
     WINLATOR("Winlator"),
     GAMEHUB("GameHub"),
     PSP("PSP"),
+    RPG("RPG Maker"),
     UNKNOWN("Unknown");
 
     private final String displayName;

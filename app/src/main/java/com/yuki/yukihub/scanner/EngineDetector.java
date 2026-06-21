@@ -64,6 +64,32 @@ public class EngineDetector {
         } else if (s.firstPspFile != null) {
             score(r, EngineType.PSP, 95, s.firstPspFile);
         }
+        
+        // RPG Maker识别规则（严谨版）
+        // 规则1：RPG Maker MZ（最高置信度）- 有rmmz_core.js和System.json
+        if (s.hasRpgMakerMzCore && s.hasRpgMakerSystemJson) {
+            score(r, EngineType.RPG, 98, "[游戏目录]");
+        }
+        // 规则2：RPG Maker MV（最高置信度）- 有rpg_core.js和System.json
+        else if (s.hasRpgMakerMvCore && s.hasRpgMakerSystemJson) {
+            score(r, EngineType.RPG, 98, "[游戏目录]");
+        }
+        // 规则3：RPG Maker MZ（NW.js打包版）- 有package.json和rmmz相关文件
+        else if (s.hasRpgMakerPackageJson && s.hasRpgMakerMzCore) {
+            score(r, EngineType.RPG, 95, "[游戏目录]");
+        }
+        // 规则4：RPG Maker MV（NW.js打包版）- 有package.json和rpg相关文件
+        else if (s.hasRpgMakerPackageJson && s.hasRpgMakerMvCore) {
+            score(r, EngineType.RPG, 95, "[游戏目录]");
+        }
+        // 规则5：RPG Maker MV/MZ（简化版）- 有js目录、data目录、System.json
+        else if (s.hasRpgMakerJsDir && s.hasRpgMakerDataDir && s.hasRpgMakerSystemJson) {
+            score(r, EngineType.RPG, 85, "[游戏目录]");
+        }
+        // 规则6：RPG Maker XP/VX/VX Ace - 有exe和Data目录下的数据文件
+        else if (s.hasRpgMakerExe && s.hasRpgMakerDataDir && s.hasRpgMakerMapJson) {
+            score(r, EngineType.RPG, 90, s.firstRpgMakerExe != null ? s.firstRpgMakerExe : "[游戏目录]");
+        }
         return r;
     }
 
@@ -104,6 +130,16 @@ public class EngineDetector {
         boolean hasPackageJson = false;
         boolean hasElectronPak = false;
         String firstPspFile = null;
+        // RPG Maker相关
+        boolean hasRpgMakerMvCore = false;  // js/rpg_core.js
+        boolean hasRpgMakerMzCore = false;  // js/rmmz_core.js
+        boolean hasRpgMakerJsDir = false;   // js目录
+        boolean hasRpgMakerDataDir = false; // data目录
+        boolean hasRpgMakerSystemJson = false; // data/System.json
+        boolean hasRpgMakerMapJson = false; // data/Map*.json
+        boolean hasRpgMakerExe = false;     // *.exe
+        boolean hasRpgMakerPackageJson = false; // package.json (NW.js)
+        String firstRpgMakerExe = null;
     }
 
     private static void collectFeatures(DocumentFile dir, String prefix, int level, int maxLevel, FeatureState s) {
@@ -148,6 +184,9 @@ public class EngineDetector {
                 if (lower.equals("movie")) s.hasMovieDir = true;
                 if (lower.equals("font")) s.hasFontDir = true;
                 if (lower.equals("others")) s.hasOthersDir = true;
+                // RPG Maker相关目录
+                if (lower.equals("js")) s.hasRpgMakerJsDir = true;
+                if (lower.equals("data") && level == 1) s.hasRpgMakerDataDir = true;
                 if (level < maxLevel && shouldDescendForFeature(lower)) collectFeatures(f, rel, level + 1, maxLevel, s);
                 continue;
             }
@@ -178,12 +217,22 @@ public class EngineDetector {
                 lower.endsWith(".elf") || lower.endsWith(".pbp")) {
                 if (s.firstPspFile == null) s.firstPspFile = original;
             }
+            // RPG Maker相关文件检测
+            if (lower.equals("rpg_core.js")) s.hasRpgMakerMvCore = true;
+            if (lower.equals("rmmz_core.js")) s.hasRpgMakerMzCore = true;
+            if (lower.equals("system.json") && prefix.equals("data")) s.hasRpgMakerSystemJson = true;
+            if (lower.startsWith("map") && lower.endsWith(".json") && prefix.equals("data")) s.hasRpgMakerMapJson = true;
+            if (lower.endsWith(".exe") && s.firstRpgMakerExe == null) {
+                s.hasRpgMakerExe = true;
+                s.firstRpgMakerExe = original;
+            }
+            if (lower.equals("package.json") && level == 1) s.hasRpgMakerPackageJson = true;
         }
     }
 
     private static boolean shouldDescendForFeature(String lowerName) {
         if (lowerName == null) return false;
-        return lowerName.equals("resources") || lowerName.equals("app") || lowerName.equals("tyrano") || lowerName.equals("data") || lowerName.equals("scenario") || lowerName.equals("system");
+        return lowerName.equals("resources") || lowerName.equals("app") || lowerName.equals("tyrano") || lowerName.equals("data") || lowerName.equals("scenario") || lowerName.equals("system") || lowerName.equals("js");
     }
 
     private static String safeName(DocumentFile file) {
